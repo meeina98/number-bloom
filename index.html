@@ -5,37 +5,62 @@
   <title>Number Bloom</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: Helvetica, sans-serif;
       text-align: center;
-      margin-top: 100px;
-      background-color: #fefcf3;
-      color: #333;
+      margin-top: 80px;
+      background-color: magenta;
+      color: #fff;
     }
+
     .number-box {
       font-size: 48px;
-      margin: 30px;
+      margin: 20px auto;
       padding: 20px;
-      border: 2px dashed #4CAF50;
+      border: 2px dashed #fff;
       display: inline-block;
       width: 200px;
       height: 80px;
       line-height: 80px;
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
     }
+
     .hidden {
       visibility: hidden;
     }
-    button {
-      padding: 10px 20px;
-      font-size: 18px;
-      margin-top: 20px;
-      cursor: pointer;
-    }
+
     input {
       font-size: 18px;
       padding: 8px;
       margin-top: 10px;
       width: 120px;
       text-align: center;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 18px;
+      margin-top: 20px;
+      cursor: pointer;
+      background-color: #fff;
+      color: magenta;
+      border: none;
+      border-radius: 5px;
+    }
+
+    #inputSection {
+      margin-top: 20px;
+    }
+
+    #countdown {
+      font-size: 24px;
+      margin-top: 10px;
+    }
+
+    #progress {
+      font-size: 18px;
+      margin-top: 30px;
+      font-weight: bold;
     }
   </style>
 </head>
@@ -44,10 +69,8 @@
   <h1>🌸 Number Bloom</h1>
   <p>Memorize the number before it disappears!</p>
 
-  <div id="numberBox" class="number-box">Press Start</div>
-
-  <br>
-  <button onclick="startGame()">Start</button>
+  <div id="numberBox" class="number-box">Loading...</div>
+  <div id="countdown"></div>
 
   <div id="inputSection" style="display:none;">
     <input type="text" id="userInput" placeholder="Enter number">
@@ -56,10 +79,13 @@
   </div>
 
   <p id="feedback"></p>
+  <p id="progress">Rounds completed: 0</p>
 
   <script>
     let currentLength = 3;
     let currentNumber = "";
+    let roundsCompleted = 0;
+    let countdownInterval;
 
     function generateNumber(length) {
       let number = "";
@@ -67,6 +93,25 @@
         number += Math.floor(Math.random() * 10);
       }
       return number;
+    }
+
+    function updateProgress() {
+      document.getElementById('progress').textContent = `Rounds completed: ${roundsCompleted}`;
+    }
+
+    function showCountdown(seconds) {
+      const countdownDisplay = document.getElementById('countdown');
+      countdownDisplay.textContent = seconds;
+
+      countdownInterval = setInterval(() => {
+        seconds--;
+        if (seconds > 0) {
+          countdownDisplay.textContent = seconds;
+        } else {
+          clearInterval(countdownInterval);
+          countdownDisplay.textContent = '';
+        }
+      }, 1000);
     }
 
     function startGame() {
@@ -77,7 +122,8 @@
       numberBox.classList.remove('hidden');
       document.getElementById('inputSection').style.display = 'none';
 
-      // Hide the number after 5 seconds
+      showCountdown(5);
+
       setTimeout(() => {
         numberBox.textContent = '';
         numberBox.classList.add('hidden');
@@ -93,12 +139,21 @@
       if (userAnswer === currentNumber) {
         feedback.textContent = "✅ Correct! Get ready for the next round...";
         currentLength++;
+        roundsCompleted++;
       } else {
-        feedback.textContent = `❌ Oops! The number was ${currentNumber}. Try again from 3 digits.`;
+        feedback.textContent = `❌ Oops! The number was ${currentNumber}. Restarting from 3 digits.`;
         currentLength = 3;
+        roundsCompleted = 0;
       }
+      updateProgress();
       setTimeout(startGame, 2000);
     }
+
+    // Start the game when the page loads
+    window.onload = () => {
+      updateProgress();
+      startGame();
+    };
   </script>
 
 </body>
