@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Number Bloom</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 100px;
+      background-color: #fefcf3;
+      color: #333;
+    }
+    .number-box {
+      font-size: 48px;
+      margin: 30px;
+      padding: 20px;
+      border: 2px dashed #4CAF50;
+      display: inline-block;
+      width: 200px;
+      height: 80px;
+      line-height: 80px;
+    }
+    .hidden {
+      visibility: hidden;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 18px;
+      margin-top: 20px;
+      cursor: pointer;
+    }
+    input {
+      font-size: 18px;
+      padding: 8px;
+      margin-top: 10px;
+      width: 120px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🌸 Number Bloom</h1>
+  <p>Memorize the number before it disappears!</p>
+
+  <div id="numberBox" class="number-box">Press Start</div>
+
+  <br>
+  <button onclick="startGame()">Start</button>
+
+  <div id="inputSection" style="display:none;">
+    <input type="text" id="userInput" placeholder="Enter number">
+    <br>
+    <button onclick="checkAnswer()">Submit</button>
+  </div>
+
+  <p id="feedback"></p>
+
+  <script>
+    let currentLength = 3;
+    let currentNumber = "";
+
+    function generateNumber(length) {
+      let number = "";
+      for (let i = 0; i < length; i++) {
+        number += Math.floor(Math.random() * 10);
+      }
+      return number;
+    }
+
+    function startGame() {
+      document.getElementById('feedback').textContent = '';
+      currentNumber = generateNumber(currentLength);
+      const numberBox = document.getElementById('numberBox');
+      numberBox.textContent = currentNumber;
+      numberBox.classList.remove('hidden');
+      document.getElementById('inputSection').style.display = 'none';
+
+      // Hide the number after 5 seconds
+      setTimeout(() => {
+        numberBox.textContent = '';
+        numberBox.classList.add('hidden');
+        document.getElementById('inputSection').style.display = 'block';
+        document.getElementById('userInput').value = '';
+        document.getElementById('userInput').focus();
+      }, 5000);
+    }
+
+    function checkAnswer() {
+      const userAnswer = document.getElementById('userInput').value;
+      const feedback = document.getElementById('feedback');
+      if (userAnswer === currentNumber) {
+        feedback.textContent = "✅ Correct! Get ready for the next round...";
+        currentLength++;
+      } else {
+        feedback.textContent = `❌ Oops! The number was ${currentNumber}. Try again from 3 digits.`;
+        currentLength = 3;
+      }
+      setTimeout(startGame, 2000);
+    }
+  </script>
+
+</body>
+</html>
