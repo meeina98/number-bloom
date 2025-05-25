@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jungle Memory Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Lobster&display=swap" rel="stylesheet">
+    <style>
+        /* Custom CSS for game board and cards */
+        body {
+            font-family: 'Lobster', cursive;
+            background-color: #f0fdf4; /* Light green background */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+            color: #1e3a8a; /* Dark blue text */
+        }
+
+        .game-container {
+            background-color: #dcfce7; /* Lighter green container */
+            border-radius: 1.5rem; /* Rounded corners */
+            padding: 2.5rem;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 90%; /* Max width for responsiveness */
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .game-board {
+            display: grid;
+            gap: 1rem; /* Space between cards */
+            margin-top: 1.5rem;
+            justify-content: center; /* Center the grid items */
+            align-items: center; /* Center the grid items */
+        }
+
+        .memory-card {
+            width: 100px; /* Default card width */
+            height: 100px; /* Default card height */
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+            cursor: pointer;
+            border-radius: 0.75rem; /* Rounded corners for cards */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .memory-card.flip {
+            transform: rotateY(180deg);
+        }
+
+        .memory-card.matched {
+            opacity: 0.5; /* Slightly fade matched cards */
+            pointer-events: none; /* Disable clicks on matched cards */
+        }
+
+        .front-face, .back-face {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            backface-visibility: hidden;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem; /* Large icon/text size */
+            color: #fff;
+        }
+
+        .front-face {
+            background-color: #34d399; /* Green for front face */
+            transform: rotateY(180deg);
+        }
+
+        .back-face {
+            background-color: #10b981; /* Darker green for back face */
+            border: 3px solid #065f46; /* Dark green border */
+        }
+
+        .front-face img {
+            width: 100%; /* Make image fill the card */
+            height: 100%;
+            object-fit: cover; /* Cover the area, cropping if necessary */
+            border-radius: 0.75rem;
+        }
+
+        /* Responsive adjustments for card size and grid layout */
+        @media (min-width: 640px) { /* sm breakpoint */
+            .memory-card {
+                width: 120px;
+                height: 120px;
+            }
+        }
+
+        @media (min-width: 768px) { /* md breakpoint */
+            .memory-card {
+                width: 140px;
+                height: 140px;
+            }
+        }
+
+        @media (min-width: 1024px) { /* lg breakpoint */
+            .memory-card {
+                width: 150px;
+                height: 150px;
+            }
+        }
+
+        /* Grid column adjustments based on number of cards */
+        .grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        .grid-cols-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+        .grid-cols-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-green-100 to-emerald-200 min-h-screen flex flex-col items-center justify-center p-4">
+    <div class="game-container">
+        <h1 class="text-5xl font-bold mb-6 text-emerald-800 drop-shadow-lg">Jungle Memory</h1>
+        <div class="flex justify-between items-center mb-6 px-4 py-2 bg-emerald-50 rounded-xl shadow-inner">
+            <div class="text-2xl font-semibold text-emerald-700">Score: <span id="score">0</span></div>
+            <div class="text-2xl font-semibold text-emerald-700">Level: <span id="level">1</span></div>
+        </div>
+
+        <div id="game-message" class="text-2xl font-semibold text-red-600 mb-4 h-8"></div>
+
+        <div id="game-board" class="game-board">
+            </div>
+
+        <button id="start-button" class="mt-8 px-8 py-4 bg-emerald-600 text-white text-3xl font-bold rounded-full shadow-lg hover:bg-emerald-700 transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-emerald-300">
+            Start Game
+        </button>
+
+        <div class="mt-4 flex items-center justify-center">
+            <audio id="background-music" loop autoplay>
+                <!--
+                    IMPORTANT: Replace this with a real, royalty-free calming background music MP3 URL.
+                    This is a placeholder. You can find suitable music on sites like Bensound.com, FesliyanStudios.com, or Free-Stock-Music.com.
+                -->
+                <source src="https://www.bensound.com/bensound-music/bensound-ukulele.mp3" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+            <button id="music-toggle-button" class="ml-4 px-4 py-2 bg-blue-500 text-white rounded-full text-lg shadow-md hover:bg-blue-600 transition duration-300 ease-in-out">
+                Pause Music
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Get DOM elements
+        const gameBoard = document.getElementById('game-board');
+        const scoreDisplay = document.getElementById('score');
+        const levelDisplay = document.getElementById('level');
+        const gameMessage = document.getElementById('game-message');
+        const startButton = document.getElementById('start-button');
+        const backgroundMusic = document.getElementById('background-music');
+        const musicToggleButton = document.getElementById('music-toggle-button');
+
+        // Game state variables
+        let score = 0;
+        let level = 1;
+        let pairsFound = 0;
+        let firstCard = null;
+        let secondCard = null;
+        let lockBoard = false;
+        let gameStarted = false;
+
+        // Jungle animal images (using public domain images from Pexels)
+        const animalImages = [
+            { name: 'Lion', url: 'https://images.pexels.com/photos/357335/pexels-photo-357335.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' },
+            { name: 'Tiger', url: 'https://images.pexels.com/photos/33045/lion-wild-africa-african.jpg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' },
+            { name: 'Elephant', url: 'https://images.pexels.com/photos/247407/pexels-photo-247407.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' },
+            { name: 'Monkey', url: 'https://images.pexels.com/photos/220455/pexels-photo-220455.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' },
+            { name: 'Giraffe', url: 'https://images.pexels.com/photos/108941/pexels-photo-108941.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' },
+            { name: 'Zebra', url: 'https://images.pexels.com/photos/235604/pexels-photo-235604.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' }, // Updated Zebra image URL
+            { name: 'Panda', url: 'https://images.pexels.com/photos/145939/pexels-photo-145939.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' },
+            { name: 'Crocodile', url: 'https://images.pexels.com/photos/1231643/pexels-photo-1231643.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' },
+            { name: 'Parrot', url: 'https://images.pexels.com/photos/104336/pexels-photo-104336.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' },
+            { name: 'Snake', url: 'https://images.pexels.com/photos/101403/pexels-photo-101403.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' },
+            { name: 'Gorilla', url: 'https://images.pexels.com/photos/207045/pexels-photo-207045.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' },
+            { name: 'Cheetah', url: 'https://images.pexels.com/photos/140510/pexels-photo-140510.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' }
+        ];
+
+        // Define pairs per level
+        // Each value represents the number of PAIRS for that level.
+        // So, level 1 has 3 pairs (6 cards), level 2 has 4 pairs (8 cards), etc.
+        const levelPairs = [
+            0, // Index 0 is unused, levels start from 1
+            3, // Level 1: 3 pairs (6 cards)
+            4, // Level 2: 4 pairs (8 cards)
+            5, // Level 3: 5 pairs (10 cards)
+            6, // Level 4: 6 pairs (12 cards)
+            8, // Level 5: 8 pairs (16 cards)
+            10, // Level 6: 10 pairs (20 cards)
+            12, // Level 7: 12 pairs (24 cards)
+            12, // Level 8: 12 pairs (24 cards) - Max unique images available
+            12, // Level 9: 12 pairs (24 cards)
+            12  // Level 10: 12 pairs (24 cards)
+        ];
+
+        // Motivational quotes
+        const motivationalQuotes = [
+            "Great job! Keep up the amazing work!",
+            "Fantastic! You're a true memory master!",
+            "Excellent! Onward to the next challenge!",
+            "Well done! Your memory is getting sharper!",
+            "Superb! You're making great progress!",
+            "You did it! Another level conquered!",
+            "Awesome! Keep that brain active!",
+            "Impressive! What a memory!",
+            "Bravo! You're unstoppable!",
+            "Victory! Time for the next adventure!"
+        ];
+
+        /**
+         * Initializes the game board for the current level.
+         * Resets game state and creates new cards.
+         */
+        function initGame() {
+            gameStarted = true;
+            score = 0;
+            level = 1;
+            pairsFound = 0;
+            firstCard = null;
+            secondCard = null;
+            lockBoard = false;
+            gameMessage.textContent = ''; // Clear any previous messages
+            startButton.textContent = 'Restart Game'; // Change button text
+            startButton.onclick = restartGame; // Change button action
+
+            updateScoreDisplay();
+            updateLevelDisplay();
+            createBoard();
+            playMusic(); // Start playing music when the game initializes
+        }
+
+        /**
+         * Restarts the game from level 1.
+         */
+        function restartGame() {
+            initGame(); // Simply call initGame to reset everything
+        }
+
+        /**
+         * Creates the memory game board based on the current level's number of pairs.
+         */
+        function createBoard() {
+            gameBoard.innerHTML = ''; // Clear previous board
+            const numPairs = levelPairs[level];
+            const totalCards = numPairs * 2;
+
+            // Ensure we have enough unique images for the current level
+            if (numPairs > animalImages.length) {
+                gameMessage.textContent = 'Not enough unique animals for this level! Max level reached.';
+                // Adjust levelPairs to not exceed available unique images
+                level = animalImages.length; // Cap level at max available images
+                const cappedNumPairs = levelPairs[level];
+                const cappedTotalCards = cappedNumPairs * 2;
+                const selectedAnimals = animalImages.slice(0, cappedNumPairs);
+                const cardsArray = [...selectedAnimals, ...selectedAnimals];
+                shuffle(cardsArray);
+                applyGridClass(cappedTotalCards);
+                cardsArray.forEach(animal => {
+                    const card = createCard(animal);
+                    gameBoard.appendChild(card);
+                });
+                return;
+            }
+
+            // Select a subset of animals for the current level
+            const selectedAnimals = animalImages.slice(0, numPairs);
+            const cardsArray = [...selectedAnimals, ...selectedAnimals]; // Duplicate for pairs
+
+            shuffle(cardsArray); // Shuffle the cards
+
+            applyGridClass(totalCards); // Apply grid class based on total cards
+
+            // Create card elements and append to board
+            cardsArray.forEach(animal => {
+                const card = createCard(animal);
+                gameBoard.appendChild(card);
+            });
+        }
+
+        /**
+         * Applies the correct CSS grid class to the game board based on the number of cards.
+         * @param {number} totalCards - The total number of cards on the board.
+         */
+        function applyGridClass(totalCards) {
+            let gridColsClass = '';
+            if (totalCards <= 6) {
+                gridColsClass = 'grid-cols-3';
+            } else if (totalCards <= 12) {
+                gridColsClass = 'grid-cols-4';
+            } else if (totalCards <= 20) {
+                gridColsClass = 'grid-cols-5';
+            } else {
+                gridColsClass = 'grid-cols-6';
+            }
+            gameBoard.className = `game-board ${gridColsClass}`; // Apply grid class
+        }
+
+        /**
+         * Creates a single memory card HTML element.
+         * @param {object} animalObject - An object containing the animal's name and image URL.
+         * @returns {HTMLElement} The created memory card element.
+         */
+        function createCard(animalObject) {
+            const card = document.createElement('div');
+            card.classList.add('memory-card', 'rounded-xl', 'shadow-md');
+            card.dataset.framework = animalObject.name; // Store animal name for matching
+
+            // Front face (revealed when flipped)
+            const frontFace = document.createElement('div'); // Changed to div to contain img
+            frontFace.classList.add('front-face', 'absolute', 'w-full', 'h-full', 'rounded-xl');
+            const frontImage = document.createElement('img');
+            frontImage.src = animalObject.url;
+            frontImage.alt = animalObject.name;
+            // Fallback for image loading errors
+            frontImage.onerror = () => {
+                frontImage.src = `https://placehold.co/150x150/FF0000/FFFFFF?text=Error`; // Red placeholder
+                console.error(`Failed to load image: ${animalObject.url}`);
+            };
+            frontFace.appendChild(frontImage);
+
+            // Back face (hidden, card back)
+            const backFace = document.createElement('div');
+            backFace.classList.add('back-face', 'absolute', 'w-full', 'h-full', 'rounded-xl', 'flex', 'items-center', 'justify-center', 'text-5xl', 'text-white');
+            backFace.innerHTML = '&#127807;'; // Leaf emoji for card back
+
+            card.appendChild(frontFace);
+            card.appendChild(backFace);
+
+            card.addEventListener('click', flipCard);
+            return card;
+        }
+
+        /**
+         * Shuffles an array in place using the Fisher-Yates algorithm.
+         * @param {Array} array - The array to shuffle.
+         */
+        function shuffle(array) {
+            let currentIndex = array.length, randomIndex;
+
+            // While there remain elements to shuffle.
+            while (currentIndex !== 0) {
+                // Pick a remaining element.
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+
+                // And swap it with the current element.
+                [array[currentIndex], array[randomIndex]] = [
+                    array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        /**
+         * Handles the card flipping logic when a card is clicked.
+         */
+        function flipCard() {
+            // If board is locked or card is already flipped, do nothing
+            if (lockBoard) return;
+            if (this === firstCard) return; // Prevent double-clicking the same card
+
+            this.classList.add('flip');
+
+            if (!firstCard) {
+                // This is the first card flipped
+                firstCard = this;
+                return;
+            }
+
+            // This is the second card flipped
+            secondCard = this;
+            lockBoard = true; // Lock the board to prevent further clicks
+
+            checkForMatch();
+        }
+
+        /**
+         * Checks if the two flipped cards are a match.
+         */
+        function checkForMatch() {
+            const isMatch = firstCard.dataset.framework === secondCard.dataset.framework;
+
+            isMatch ? disableCards() : unflipCards();
+        }
+
+        /**
+         * Disables matched cards by removing their event listeners and adding a 'matched' class.
+         */
+        function disableCards() {
+            firstCard.removeEventListener('click', flipCard);
+            secondCard.removeEventListener('click', flipCard);
+
+            firstCard.classList.add('matched');
+            secondCard.classList.add('matched');
+
+            pairsFound++;
+            resetBoard(); // Reset for next turn
+
+            if (pairsFound === levelPairs[level]) {
+                // All pairs found for the current level
+                setTimeout(() => {
+                    levelComplete();
+                }, 800); // Small delay before level complete message
+            }
+        }
+
+        /**
+         * Unflips cards that do not match after a short delay.
+         */
+        function unflipCards() {
+            setTimeout(() => {
+                firstCard.classList.remove('flip');
+                secondCard.classList.remove('flip');
+                resetBoard(); // Reset for next turn
+            }, 1000); // Cards stay flipped for 1 second before unflipping
+        }
+
+        /**
+         * Resets the firstCard, secondCard, and lockBoard variables for the next turn.
+         */
+        function resetBoard() {
+            [firstCard, secondCard, lockBoard] = [null, null, false];
+        }
+
+        /**
+         * Handles actions when a level is completed (score update, level progression).
+         */
+        function levelComplete() {
+            score += 10; // Add 10 points for completing the level
+            updateScoreDisplay();
+
+            // Display a random motivational quote
+            const randomQuote = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
+            gameMessage.textContent = `Level ${level} Complete! +10 Points! ${randomQuote}`;
+
+            level++;
+            if (level <= animalImages.length) { // Check if there are enough unique images for the next level
+                setTimeout(() => {
+                    updateLevelDisplay();
+                    pairsFound = 0; // Reset pairs found for the new level
+                    gameMessage.textContent = ''; // Clear message
+                    createBoard(); // Create board for the next level
+                }, 2500); // Longer delay to read the quote
+            } else {
+                // Game over, all levels completed or max unique images reached
+                gameMessage.textContent = `Congratulations! You completed all levels with a final score of ${score}! You are a true memory master!`;
+                startButton.textContent = 'Play Again';
+                startButton.onclick = restartGame;
+                gameStarted = false;
+                pauseMusic(); // Pause music when the game ends
+            }
+        }
+
+        /**
+         * Updates the score display on the UI.
+         */
+        function updateScoreDisplay() {
+            scoreDisplay.textContent = score;
+        }
+
+        /**
+         * Updates the level display on the UI.
+         */
+        function updateLevelDisplay() {
+            levelDisplay.textContent = level;
+        }
+
+        /**
+         * Plays the background music.
+         */
+        function playMusic() {
+            backgroundMusic.play().catch(error => {
+                // Autoplay might be blocked, inform user or handle gracefully
+                console.log("Music autoplay blocked, please click the play button. Error:", error);
+                // Optionally, change button text to 'Play Music' if autoplay fails
+                musicToggleButton.textContent = 'Play Music';
+            });
+            musicToggleButton.textContent = 'Pause Music';
+        }
+
+        /**
+         * Pauses the background music.
+         */
+        function pauseMusic() {
+            backgroundMusic.pause();
+            musicToggleButton.textContent = 'Play Music';
+        }
+
+        // Toggle music play/pause on button click
+        musicToggleButton.addEventListener('click', () => {
+            if (backgroundMusic.paused) {
+                playMusic();
+            } else {
+                pauseMusic();
+            }
+        });
+
+        // Event listener for the start button
+        startButton.addEventListener('click', initGame);
+
+        // Initial state: Keep grid display, but it will be empty initially
+        gameBoard.style.display = 'grid';
+
+        // Attempt to play music on load, but it might be blocked by browsers.
+        // The play/pause button provides user control.
+        playMusic();
+
+    </script>
+</body>
+</html>
